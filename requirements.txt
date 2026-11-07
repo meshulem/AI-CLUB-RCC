@@ -1,0 +1,22 @@
+# 1. Download Python 3.11 (other versions are not tested with these pins)
+
+# 2. Create environment: python -m venv venv
+
+# 3. Activate it:
+#-----Windows: venv\Scripts\activate
+#-----Mac/Linux: source venv/bin/activate
+
+# 4. Run: pip install -r requirements.txt
+
+numpy==1.26.4
+ml-dtypes==0.3.2
+opencv-contrib-python==4.10.0.84 # Do not also install opencv-python
+mediapipe==0.10.14
+protobuf>=4.25.3,<5
+jax==0.4.30
+jaxlib==0.4.30
+tensorflow==2.16.2
+keras>=3.0,<3.6
+tf-keras==2.16.0
+tensorflow-hub==0.16.1
+setuptools<81
