@@ -10,8 +10,18 @@ from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks
 import time
 
-#Choose model
-model = 1 #1 is MediaPipe, 2 is OpenPose, 3 is MoveNet
+#==================Key Choices==================
+
+# Choose arm ("right" or "left")
+rightOrLeft = "right"
+
+# Choose model (1=MediaPipe, 2=OpenPose, 3=MoveNet)
+model = 1 
+
+# Choose Minimum angle to be counted as a rep
+minimumAngle = 65
+
+#==================Other Choices==================
 
 #options for text of body parts
 textColor = 255
@@ -20,20 +30,14 @@ textOffset = 15
 #height of other text
 textHeight = 48
 
-#minimum requirements to be counted as a rep
-minimumAngle = 65
-minimumTimeBetweenReps = 0.5 #seconds
+minimumTimeBetweenReps = 0.5
+minimumProminenceOfReps = 15 #see https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.peak_prominences.html#scipy.signal.peak_prominences for how prominnce is calculated
 
-rightOrLeft = "right" #enter which arm you'll use, can enter "right" or  "left"
-
-#switches arm because image is flipped
-if rightOrLeft == "right":
-    rightOrLeft = "left"
-elif rightOrLeft == "left":
-    rightOrLeft = "right"
+timeToCountSecPerRep = 5
 
 #size of averaging for counting reps
 movingAverageSize = 5
+
 #==================MediaPipe Setup==================
 if model == 1:
     #These are the ids for the body parts taken from mediapipe. 0 is nose, 1 is Left Eye (inner), etc.
@@ -170,6 +174,12 @@ if model == 3:
     ]
 
 #================================================
+
+#switches arm because image is flipped
+if rightOrLeft == "right":
+    rightOrLeft = "left"
+elif rightOrLeft == "left":
+    rightOrLeft = "right"
 
 class PoseDetector():
 
@@ -333,8 +343,6 @@ class PoseDetector():
         # Draw keypoints on the frame
         for key, coord in processedKeypoints.items():
 
-            print(processedKeypoints)
-
             x = int(coord[0])
             y = int(coord[1])
 
@@ -410,10 +418,6 @@ class PoseDetector():
 
         return armAngleRight, armAngleLeft
 
-        
-
-    
-
 def main():
     s = 0
     if len(sys.argv) > 1:
@@ -434,8 +438,15 @@ def main():
 
     detector = PoseDetector()
 
-    pTime = 0
-    cTime = 0
+    fpsfinalTime = 0
+    fpsinitTime = 0
+
+    repsinitTime = 0 
+    repsfinalTime = 0
+
+    reps = 0
+    secPerRep = 0
+    repsAtInitTime = 0
 
     target_fps = 100
     wait_key_delay = int(1000 / target_fps)
@@ -458,11 +469,11 @@ def main():
         armAngleRightArray.append(int(armAngleRight))
         armAngleLeftArray.append(int(armAngleLeft))
 
-        cTime = time.time()
-        fps = 1 / (cTime - pTime)
-        pTime = cTime
+        fpsfinalTime = time.time()
+        fps = 1 / (fpsfinalTime - fpsinitTime)
+        fpsinitTime = fpsfinalTime
 
-        timeArray.append(pTime - initTime)
+        timeArray.append(fpsfinalTime - initTime)
 
         if rightOrLeft == "right":
             angle = armAngleRightArray
@@ -490,14 +501,40 @@ def main():
 
         smoothedAngles = uniform_filter1d(angle, size = movingAverageSize)
 
-        flippedSmoothedAngles = 180 - smoothedAngles #done so that peaks are counted from contractions as in the plot line
+        flippedSmoothedAngles = np.flip(180 - smoothedAngles) #smoothedAngles is flipped twice: vertically so that peaks are contractions, horizontally so that circle of rep can be drawn easier
 
-        peaks, _ = find_peaks(flippedSmoothedAngles, height=180-minimumAngle, distance=max(1, minimumTimeBetweenReps*fps))
+        peaks, _ = find_peaks(flippedSmoothedAngles, height=180-minimumAngle, distance=max(1, minimumTimeBetweenReps*fps), prominence=minimumProminenceOfReps) 
+
+        previousReps = reps
 
         reps = len(peaks)
 
-        cv.putText(canvas, "fps: " + str(int(fps)), (1, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
-        cv.putText(canvas, "Reps: " + str(int(reps)), (1, frame_height+textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+        #draws circle on new rep (if there is one)
+        if reps > previousReps:
+
+            x = int(frame_width/2 - (timeArray[-1] - timeArray[-peaks[0]]) * timeToXRatio)
+            y = int(angle[-peaks[0]] * angleToYRatio)
+
+            cv.circle(plot, (x, y), 15, (255, 0, 0), -1)
+            cv.circle(plot, (x, y), 15, (255, 255, 255), 8)
+
+        #calculates reps per second every timeToCountSecPerRep seconds
+        repsfinalTime = time.time()
+        if (repsfinalTime - repsinitTime) >= timeToCountSecPerRep:
+            try:
+                secPerRep = (repsfinalTime - repsinitTime)/(reps - repsAtInitTime) #might encounter a division by zero, so it is put in a try block
+            except:
+                secPerRep = 0 
+
+            repsinitTime = repsfinalTime
+            repsAtInitTime = reps
+
+        cv.rectangle(canvas, (1, 1), (int(5.2*textHeight), int(1.3*textHeight)), (255, 255, 255), -1)
+        cv.rectangle(canvas, (1, frame_height), (int(7*textHeight), int(frame_height+2.3*textHeight)), (255, 255, 255), -1)
+
+        cv.putText(canvas, "FPS: " + str(int(fps)), (2, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
+        cv.putText(canvas, "Reps: " + str(int(reps)), (2, frame_height+textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
+        cv.putText(canvas, "Second Per Rep: " + str(round(secPerRep, 1)), (2, frame_height+2*textHeight), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         cv.imshow("Image", canvas)
 
@@ -505,27 +542,23 @@ def main():
 
         if key == ord("Q") or key == ord("q") or key == 27 or cv.getWindowProperty("Image", cv.WND_PROP_VISIBLE) < 1:
             break
-    
-    if rightOrLeft == "right":
-        print(armAngleRightArray)
-    elif rightOrLeft == "left":
-        print(armAngleLeftArray)
-
-    print(timeArray)
-
-    if rightOrLeft == "right":
-        with open("armAngleRightArray.txt", "w", encoding="utf-8") as f:
-            f.write(" ".join([str(s) for s in armAngleRightArray]))
-    elif rightOrLeft == "left":
-        with open("armAngleLeftArray.txt", "w", encoding="utf-8") as f:
-            f.write(" ".join([str(s) for s in armAngleLeftArray]))
-
-    with open("timeArray.txt", "w", encoding="utf-8") as f:
-        f.write(" ".join([str(s) for s in timeArray]))
-
 
     cap.release()
     cv.destroyAllWindows()
+
+    if rightOrLeft == "right":
+        print(armAngleRightArray)
+        with open("armAngleRightArray.txt", "w", encoding="utf-8") as f:
+            f.write(" ".join([str(s) for s in armAngleRightArray]))
+            
+    elif rightOrLeft == "left":
+        print(armAngleLeftArray)
+        with open("armAngleLeftArray.txt", "w", encoding="utf-8") as f:
+            f.write(" ".join([str(s) for s in armAngleLeftArray]))
+
+    print(timeArray)
+    with open("timeArray.txt", "w", encoding="utf-8") as f:
+        f.write(" ".join([str(s) for s in timeArray]))
 
 if __name__ == '__main__':
     main()
