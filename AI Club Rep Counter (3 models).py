@@ -69,17 +69,8 @@ if model == 1:
 #==================OpenPose Setup==================
 net = None
 if model == 2:
-    model_file = (
-        "/Users/Meshulem/Documents/Code/MeshulemsChess/AI_Club_Project/"
-        "pose_iter_440000.caffemodel"
-    )
-    proto_file = (
-        "/Users/Meshulem/Documents/Code/MeshulemsChess/AI_Club_Project/"
-        "pose_deploy.prototxt"
-    )
-
-
-    net = cv.dnn.readNet(model_file, proto_file)
+    
+    net = cv.dnn.readNet("pose_iter_440000.caffemodel", "pose_deploy.prototxt")
     net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
     net.setPreferableTarget(cv.dnn.DNN_TARGET_OPENCL)
 
