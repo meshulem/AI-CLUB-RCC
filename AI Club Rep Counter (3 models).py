@@ -6,6 +6,8 @@ import mediapipe as mp
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import tensorflow as tf
 import tensorflow_hub as hub
+from scipy.ndimage import uniform_filter1d
+from scipy.signal import find_peaks
 import time
 
 #Choose model
@@ -15,9 +17,12 @@ model = 1 #1 is MediaPipe, 2 is OpenPose, 3 is MoveNet
 textColor = 255
 textOffset = 15
 
-#angles from shoulder to wrist, normal reps are counted from minimumAngle and goal reps are counted from goalAngle
-minimumAngle = 120
-goalAngle = 40
+#height of other text
+textHeight = 48
+
+#minimum requirements to be counted as a rep
+minimumAngle = 65
+minimumTimeBetweenReps = 0.5 #seconds
 
 rightOrLeft = "right" #enter which arm you'll use, can enter "right" or  "left"
 
@@ -27,6 +32,8 @@ if rightOrLeft == "right":
 elif rightOrLeft == "left":
     rightOrLeft = "right"
 
+#size of averaging for counting reps
+movingAverageSize = 5
 #==================MediaPipe Setup==================
 if model == 1:
     #These are the ids for the body parts taken from mediapipe. 0 is nose, 1 is Left Eye (inner), etc.
@@ -69,7 +76,7 @@ if model == 1:
 #==================OpenPose Setup==================
 net = None
 if model == 2:
-    
+
     net = cv.dnn.readNet("pose_iter_440000.caffemodel", "pose_deploy.prototxt")
     net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
     net.setPreferableTarget(cv.dnn.DNN_TARGET_OPENCL)
@@ -457,8 +464,6 @@ def main():
 
         timeArray.append(pTime - initTime)
 
-        cv.putText(img, str(int(fps)), (1, 24), cv.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
         if rightOrLeft == "right":
             angle = armAngleRightArray
         elif rightOrLeft == "left":
@@ -482,6 +487,17 @@ def main():
 
         canvas[:frame_height, :] = img
         canvas[frame_height:, :] = plot[:, (-frame_width):]
+
+        smoothedAngles = uniform_filter1d(angle, size = movingAverageSize)
+
+        flippedSmoothedAngles = 180 - smoothedAngles #done so that peaks are counted from contractions as in the plot line
+
+        peaks, _ = find_peaks(flippedSmoothedAngles, height=180-minimumAngle, distance=max(1, minimumTimeBetweenReps*fps))
+
+        reps = len(peaks)
+
+        cv.putText(canvas, "fps: " + str(int(fps)), (1, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+        cv.putText(canvas, "Reps: " + str(int(reps)), (1, frame_height+textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
         cv.imshow("Image", canvas)
 
