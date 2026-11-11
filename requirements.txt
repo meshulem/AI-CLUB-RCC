@@ -1,12 +1,14 @@
-# 1. Download Python 3.11 (other versions are not tested with these pins)
+# Download Anaconda at https://www.anaconda.com/download/success?reg=skipped&path=distribution. Follow installation instructions.
 
-# 2. Create environment: python -m venv venv
+# Download the Python extension in your IDE
 
-# 3. Activate it:
-#-----Windows: venv\Scripts\activate
-#-----Mac/Linux: source venv/bin/activate
+# Run the following commands in the terminal:
 
-# 4. Run: pip install -r requirements.txt
+'''
+conda create -n club-env python=3.11.11
+conda activate club-env
+pip install -r requirements.txt
+'''
 
 numpy==1.26.4
 ml-dtypes==0.3.2
