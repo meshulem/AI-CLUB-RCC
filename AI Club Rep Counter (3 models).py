@@ -34,6 +34,7 @@ warnings.filterwarnings('ignore')
 rightOrLeft = "right"
 
 # Choose model for detecting pose (1=MediaPipe, 2=OpenPose, 3=MoveNet)
+# 2 needs pose_iter_440000.caffemodel. Download from https://huggingface.co/camenduru/openpose/blob/main/models/pose/coco/pose_iter_440000.caffemodel and put into folder
 poseModel = 1
 
 # Choose machine learning model for class prediction (1=Random Forest, 2=Support Vector Machine(SVM), 3=K-Nearest Neighbors (KNN), 4=Neural Network)
