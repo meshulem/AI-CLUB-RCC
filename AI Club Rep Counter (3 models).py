@@ -516,15 +516,9 @@ class ClassPredictor():
         return prediction
     
     def getPredictionKNN(self, angleSample):
-
-        print(angleSample)
-
         quality = KNN.predict([angleSample])[0]
         qualityPercentages = KNN.predict_proba([angleSample])[0]
-
-        print(quality)
-        print(qualityPercentages)
-
+        
         #Gets quality if model is confident
         if max(qualityPercentages) > 0.6:
             prediction = quality
