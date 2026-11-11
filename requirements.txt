@@ -10,7 +10,7 @@
 
 numpy==1.26.4
 ml-dtypes==0.3.2
-opencv-contrib-python==4.10.0.84 # Do not also install opencv-python
+opencv-contrib-python==4.10.0.84 # Do not install opencv-python
 mediapipe==0.10.14
 protobuf>=4.25.3,<5
 jax==0.4.30
@@ -20,5 +20,5 @@ keras>=3.0,<3.6
 tf-keras==2.16.0
 tensorflow-hub==0.16.1
 setuptools<81
-
-#If that does not work for whatever reason, try pip install -r requirements-working.txt
+pandas==2.2.3
+scikit-learn==1.6.1

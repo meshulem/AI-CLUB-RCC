@@ -1,3 +1,18 @@
+#=====================Instructions=====================
+
+# see requirements.txt for how to get started
+
+# Stand in front of your default webcam with your entire arm visible
+
+# Your body should be perpendicular to the screen
+
+# Do bicep curls and the reps should count up
+
+# Press any key to finish
+
+
+#=================Import requirements=================
+
 import sys
 import os
 import cv2 as cv
@@ -9,17 +24,24 @@ import tensorflow_hub as hub
 from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks
 import time
+import joblib
+import warnings
+warnings.filterwarnings('ignore')
 
 #==================Key Choices==================
 
 # Choose arm ("right" or "left")
 rightOrLeft = "right"
 
-# Choose model (1=MediaPipe, 2=OpenPose, 3=MoveNet)
-model = 1 
+# Choose model for detecting pose (1=MediaPipe, 2=OpenPose, 3=MoveNet)
+poseModel = 1
+
+# Choose machine learning model for class prediction (1=Random Forest, 2=Support Vector Machine(SVM), 3=K-Nearest Neighbors (KNN), 4=Neural Network)
+# Prediction models only work (even a little well) with poseModel=1
+predictionModel = 3
 
 # Choose Minimum angle to be counted as a rep
-minimumAngle = 65
+minimumAngle = 60
 
 #==================Other Choices==================
 
@@ -36,10 +58,15 @@ minimumProminenceOfReps = 15 #see https://docs.scipy.org/doc/scipy/reference/gen
 timeToCountSecPerRep = 5
 
 #size of averaging for counting reps
-movingAverageSize = 5
+movingAverageSize = 3
+
+predictionWhenUnsure = "..."
+
+percentageOfFrameWidthToPlacePlotLine = 0.7
 
 #==================MediaPipe Setup==================
-if model == 1:
+
+if poseModel == 1:
     #These are the ids for the body parts taken from mediapipe. 0 is nose, 1 is Left Eye (inner), etc.
     BODY_PARTS_MEDIAPIPE = [
         "Nose",
@@ -78,8 +105,9 @@ if model == 1:
     ]
 
 #==================OpenPose Setup==================
+
 net = None
-if model == 2:
+if poseModel == 2:
 
     net = cv.dnn.readNet("pose_iter_440000.caffemodel", "pose_deploy.prototxt")
     net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
@@ -133,7 +161,8 @@ if model == 2:
     ]
 
 #==================MoveNet Setup==================
-if model == 3:
+
+if poseModel == 3:
     movenet = hub.load("https://tfhub.dev/google/movenet/singlepose/thunder/4")
 
     inputSize = 256 #256 for thunder (slower, better), 192 for lightning (faster, worse)
@@ -173,6 +202,18 @@ if model == 3:
         ["Left Eye", "Left Ear"],
     ]
 
+#===============Prediction Model Setup==================
+
+match predictionModel:
+    case 1:
+        randomForest = joblib.load("Saved_Model_Prototype_RF.joblib")
+    case 2:
+        SVM = joblib.load("Saved_Model_Prototype_SVM.joblib")
+    case 3:
+        KNN = joblib.load("Saved_Model_Prototype_KNN.joblib")
+    case 4: 
+        NN = joblib.load("Saved_Model_Prototype_NN.joblib")
+
 #================================================
 
 #switches arm because image is flipped
@@ -184,6 +225,9 @@ elif rightOrLeft == "left":
 class PoseDetector():
 
     def __init__(self, staticImageMode=False, modelComplexity=1, smoothLandmarks=True, enableSegmentation=False, smoothSegmentation=True, minDetectionConfidence=0.5, minTrackingConfidence=0.5):
+
+        #the following is only used for MediaPipe
+
         self.staticImageMode = staticImageMode
         self.modelComplexity = modelComplexity
         self.smoothLandmarks = smoothLandmarks
@@ -210,7 +254,7 @@ class PoseDetector():
         r_wrist = [0,0]
         l_wrist = [0,0]
     
-        match model:
+        match poseModel:
             case 1:
                 img, armAngleRight, armAngleLeft = self.getAnglesMediaPipe(img, armAngleRight, armAngleLeft, r_shoulder, l_shoulder, r_elbow, l_elbow, r_wrist, l_wrist)
             case 2:
@@ -418,6 +462,92 @@ class PoseDetector():
 
         return armAngleRight, armAngleLeft
 
+class ClassPredictor():
+    def getPrediction(self, angleSample):
+
+        angleSample = np.multiply(angleSample, 1/180)
+        
+
+        #Gets a numercal prediction (-1 if unsure)
+        match predictionModel:
+            case 1:
+                numericalPrediction = self.getPredictionRandomForest(angleSample)
+            case 2:
+                numericalPrediction = self.getPredictionSVM(angleSample)
+            case 3:
+                numericalPrediction = self.getPredictionKNN(angleSample)
+            case 4:
+                numericalPrediction = self.getPredictionNeuralNetwork(angleSample)
+
+        # Writes a prediction based on numercal prediction
+        match numericalPrediction:
+            case 1:
+                writtenPrediction = "Good"
+            case 0:
+                writtenPrediction = "Bad"
+            case -1:
+                writtenPrediction = predictionWhenUnsure
+
+        return writtenPrediction
+    
+    def getPredictionRandomForest(self, angleSample):
+        quality = randomForest.predict([angleSample])[0]
+        qualityPercentages = randomForest.predict_proba([angleSample])[0]
+
+        #Gets quality if model is confident
+        if max(qualityPercentages) > 0.6:
+            prediction = quality
+        else:
+            prediction = -1
+
+        return prediction
+    
+    def getPredictionSVM(self, angleSample):
+        quality = SVM.predict([angleSample])[0]
+        qualityPercentages = SVM.predict_proba([angleSample])[0]
+
+        #Gets quality if model is confident
+        if max(qualityPercentages) > 0.6:
+            prediction = quality
+        else:
+            prediction = -1
+
+        return prediction
+    
+    def getPredictionKNN(self, angleSample):
+
+        print(angleSample)
+
+        quality = KNN.predict([angleSample])[0]
+        qualityPercentages = KNN.predict_proba([angleSample])[0]
+
+        print(quality)
+        print(qualityPercentages)
+
+        #Gets quality if model is confident
+        if max(qualityPercentages) > 0.6:
+            prediction = quality
+        else:
+            prediction = -1
+
+        return prediction
+    
+    def getPredictionNeuralNetwork(self, angleSample):
+        
+        angleSample = np.array(angleSample).reshape(1, -1)
+
+        qualityPercentages = NN.predict(angleSample)
+        quality = tf.argmax(qualityPercentages, axis=-1).numpy()
+
+        #Gets quality if model is confident
+        if max(qualityPercentages[0]) > 0.6:
+            prediction = quality
+        else:
+            prediction = -1
+
+        return prediction
+    
+
 def main():
     s = 0
     if len(sys.argv) > 1:
@@ -438,15 +568,16 @@ def main():
 
     detector = PoseDetector()
 
+    predictor = ClassPredictor()
+
+    prediction = predictionWhenUnsure
+
     fpsfinalTime = 0
     fpsinitTime = 0
 
-    repsinitTime = 0 
-    repsfinalTime = 0
-
     reps = 0
     secPerRep = 0
-    repsAtInitTime = 0
+    repsArray = [0,0]
 
     target_fps = 100
     wait_key_delay = int(1000 / target_fps)
@@ -457,7 +588,14 @@ def main():
 
     initTime = time.time()
 
+    frames = 0
+
+    XOrigin = int(percentageOfFrameWidthToPlacePlotLine*frame_width)
+
     while True:
+
+        frames+=1
+
         success, img = cap.read()
         if not success:
             break
@@ -482,8 +620,8 @@ def main():
 
         plot = cv.line(
             plot, 
-            (int(frame_width/2), int(angle[-2] * angleToYRatio)), 
-            (int(frame_width/2  + (timeArray[-1] - timeArray[-2]) * timeToXRatio), int(angle[-1] * angleToYRatio)), 
+            (XOrigin, int(angle[-2] * angleToYRatio)), 
+            (int(XOrigin  + (timeArray[-1] - timeArray[-2]) * timeToXRatio), int(angle[-1] * angleToYRatio)), 
             (0, 255, 0), 
             2
         )
@@ -505,60 +643,66 @@ def main():
 
         peaks, _ = find_peaks(flippedSmoothedAngles, height=180-minimumAngle, distance=max(1, minimumTimeBetweenReps*fps), prominence=minimumProminenceOfReps) 
 
-        previousReps = reps
-
         reps = len(peaks)
 
-        #draws circle on new rep (if there is one)
-        if reps > previousReps:
+        repsArray.append(reps)
 
-            x = int(frame_width/2 - (timeArray[-1] - timeArray[-peaks[0]]) * timeToXRatio)
+        #draws circle on new rep (if there is one)
+        if repsArray[-1] > repsArray[-2]:
+
+            x = int(XOrigin - (timeArray[-1] - timeArray[-peaks[0]]) * timeToXRatio)
             y = int(angle[-peaks[0]] * angleToYRatio)
 
             cv.circle(plot, (x, y), 15, (255, 0, 0), -1)
             cv.circle(plot, (x, y), 15, (255, 255, 255), 8)
 
-        #calculates reps per second every timeToCountSecPerRep seconds
-        repsfinalTime = time.time()
-        if (repsfinalTime - repsinitTime) >= timeToCountSecPerRep:
+        #calculates seconds per rep
+        if frames > 110:
             try:
-                secPerRep = (repsfinalTime - repsinitTime)/(reps - repsAtInitTime) #might encounter a division by zero, so it is put in a try block
+                secPerRep = max(0,(timeArray[-1] - timeArray[-100])/(repsArray[-1] - repsArray[-100]))
             except:
-                secPerRep = 0 
+                secPerRep = 0
+            
+        # Guesses quality based on last 100 angles
+        if frames > 110:
+            prediction = predictor.getPrediction(angle[-100:])
 
-            repsinitTime = repsfinalTime
-            repsAtInitTime = reps
+        #Draws rectangles and text
+        cv.rectangle(canvas, (1, 1), (int(5.3*textHeight), int(1.3*textHeight)), (255, 255, 255), -1)
+        cv.rectangle(canvas, (1, 1), (int(5.3*textHeight), int(1.3*textHeight)), (255, 0, 0), 5)
+        cv.rectangle(canvas, (1, frame_height), (int(11.1*textHeight), int(frame_height+4.3*textHeight)), (255, 255, 255), -1)
+        cv.rectangle(canvas, (1, frame_height), (int(11.1*textHeight), int(frame_height+4.3*textHeight)), (255, 0, 0), 5)
 
-        cv.rectangle(canvas, (1, 1), (int(5.2*textHeight), int(1.3*textHeight)), (255, 255, 255), -1)
-        cv.rectangle(canvas, (1, frame_height), (int(7*textHeight), int(frame_height+2.3*textHeight)), (255, 255, 255), -1)
-
-        cv.putText(canvas, "FPS: " + str(int(fps)), (2, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
-        cv.putText(canvas, "Reps: " + str(int(reps)), (2, frame_height+textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
-        cv.putText(canvas, "Second Per Rep: " + str(round(secPerRep, 1)), (2, frame_height+2*textHeight), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv.putText(canvas, "FPS: " + str(int(fps)), (2, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
+        cv.putText(canvas, "Reps: " + str(int(reps)), (4, frame_height+textHeight+4), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
+        cv.putText(canvas, "Seconds Per Rep: " + str(round(secPerRep, 1)), (4, frame_height+2*textHeight+4), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv.putText(canvas, "Prediction: " + str(prediction), (4, int(frame_height+3.5*textHeight+4)), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
 
         cv.imshow("Image", canvas)
 
         key = cv.waitKey(wait_key_delay)
-
-        if key == ord("Q") or key == ord("q") or key == 27 or cv.getWindowProperty("Image", cv.WND_PROP_VISIBLE) < 1:
+        if not key == -1 or cv.getWindowProperty("Image", cv.WND_PROP_VISIBLE) < 1:
             break
 
     cap.release()
     cv.destroyAllWindows()
 
+    print("=========================================")
+
     if rightOrLeft == "right":
-        print(armAngleRightArray)
-        with open("armAngleRightArray.txt", "w", encoding="utf-8") as f:
+        with open("angle.txt", "w", encoding="utf-8") as f:
             f.write(" ".join([str(s) for s in armAngleRightArray]))
-            
+
     elif rightOrLeft == "left":
-        print(armAngleLeftArray)
-        with open("armAngleLeftArray.txt", "w", encoding="utf-8") as f:
+        with open("angle.txt", "w", encoding="utf-8") as f:
             f.write(" ".join([str(s) for s in armAngleLeftArray]))
 
-    print(timeArray)
+    print("=========================================")
+
     with open("timeArray.txt", "w", encoding="utf-8") as f:
         f.write(" ".join([str(s) for s in timeArray]))
+
+    print("=========================================")
 
 if __name__ == '__main__':
     main()
