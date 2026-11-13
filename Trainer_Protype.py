@@ -9,7 +9,7 @@
 # Choose arm ("right" or "left")
 rightOrLeft = "right"
 
-firstTrial = 135 #will overwrite if already there
+firstTrial = 141 #will overwrite if already there
 
 classifier = 1
 
