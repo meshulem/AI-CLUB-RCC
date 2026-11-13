@@ -1,32 +1,19 @@
 #==================Instructions==================
 
-# Set a first trial and a classifier. Time will countdown from 5, after which angles will be recorded for a brief while. 
-# Then, the time will coundtown from 5 again and the next trial will begin.
-# Press any key any time to finish.
-
-#=================Import requirements=================
-
-import sys
-import cv2 as cv
-import numpy as np
-import mediapipe as mp
-from scipy.ndimage import uniform_filter1d
-from scipy.signal import find_peaks
-import time
-import pandas as pd
-import csv
-import string
+# Set a first trial and a classifier. Time will countdown from 10, after which angles will be recorded for a brief while. 
+# Then, a short tmer will be set and then the next trial will begin.
+# Press any key any time to finish. 
 
 #==================Key Choices==================
 
 # Choose arm ("right" or "left")
 rightOrLeft = "right"
 
-firstTrial = 41
+firstTrial = 135 #will overwrite if already there
 
 classifier = 1
 
-fileName = "Training_Protype.csv"
+fileName = "Training_Protype_New.csv"
 
 #==================Other Choices==================
 
@@ -38,6 +25,19 @@ textOffset = 15
 textHeight = 48
 
 movingAverageSize = 3
+
+initialCountdownSeconds = 10
+
+secondsBetweenTrials = 0
+
+#=================Import requirements=================
+
+import sys
+import cv2 as cv
+import numpy as np
+import mediapipe as mp
+import time
+import csv
 
 #==================MediaPipe Setup==================
 #These are the ids for the body parts taken from mediapipe. 0 is nose, 1 is Left Eye (inner), etc.
@@ -246,7 +246,7 @@ def main():
 
     frames = 0
 
-    countdown = 10
+    countdown = initialCountdownSeconds
 
     while True:
 
@@ -269,8 +269,6 @@ def main():
         if countdown != 0:
             countdown = countdown - (fpsfinalTime - fpsinitTime)
         fpsinitTime = fpsfinalTime
-
-        print(fpsfinalTime - fpsinitTime)
 
         timeArray.append(fpsfinalTime - initTime)
 
@@ -303,7 +301,7 @@ def main():
         cv.rectangle(canvas, (1, 1), (int(9*textHeight), int(2.5*textHeight)), (255, 0, 0), 5)
 
         if countdown > 0:
-            cv.putText(canvas, "Starting in: " + str(int(countdown)), (2, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
+            cv.putText(canvas, "Starting in: " + str(int(countdown+1)), (2, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
         else:
             countdown = 0
             cv.putText(canvas, "Frames: " + str(int(frames)), (2, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
@@ -315,7 +313,7 @@ def main():
 
         if frames>101:
             frames = 0
-            countdown = 5
+            countdown = secondsBetweenTrials
 
             detector.writeTrial(trial, classifier, angle)
 

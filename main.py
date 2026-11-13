@@ -33,13 +33,18 @@ warnings.filterwarnings('ignore')
 # Choose arm ("right" or "left")
 rightOrLeft = "right"
 
-# Choose model for detecting pose (1=MediaPipe, 2=OpenPose, 3=MoveNet)
-# 2 needs pose_iter_440000.caffemodel. Download from https://huggingface.co/camenduru/openpose/blob/main/models/pose/coco/pose_iter_440000.caffemodel and put into folder
+# Choose model for detecting pose 
+    # 1=MediaPipe (recommended)
+    # 2=OpenPose
+    # 3=MoveNet
 poseModel = 1
 
-# Choose machine learning model for class prediction (1=Random Forest, 2=Support Vector Machine(SVM), 3=K-Nearest Neighbors (KNN), 4=Neural Network)
-# Prediction models only work (even a little well) with poseModel=1
-predictionModel = 3
+# Choose machine learning model for class prediction. Prediction models only work (even a little well) with poseModel=1
+    # 1=Random Forest (recommended)
+    # 2=Support Vector Machine(SVM)
+    # 3=K-Nearest Neighbors (KNN)
+    # 4=Neural Network
+predictionModel = 1
 
 # Choose Minimum angle to be counted as a rep
 minimumAngle = 60
@@ -56,10 +61,10 @@ textHeight = 48
 minimumTimeBetweenReps = 0.5
 minimumProminenceOfReps = 15 #see https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.peak_prominences.html#scipy.signal.peak_prominences for how prominnce is calculated
 
-timeToCountSecPerRep = 5
-
 #size of averaging for counting reps
 movingAverageSize = 3
+
+MinimumConfidenceOfPrediction = 0.5 #0.5-1
 
 predictionWhenUnsure = "..."
 
@@ -68,41 +73,42 @@ percentageOfFrameWidthToPlacePlotLine = 0.7
 #==================MediaPipe Setup==================
 
 if poseModel == 1:
-    #These are the ids for the body parts taken from mediapipe. 0 is nose, 1 is Left Eye (inner), etc.
+    #These are the ids for the body parts taken from mediapipe. 0 is nose, 1 is Right Eye (inner), etc.
+    #Note that righta nd left are switched for all pose models becuase image is flipped
     BODY_PARTS_MEDIAPIPE = [
         "Nose",
-        "Left Eye (inner)",
-        "Left Eye",
-        "Left Eye (outer)",
         "Right Eye (inner)",
         "Right Eye",
         "Right Eye (outer)",
-        "Left Ear",
+        "Left Eye (inner)",
+        "Left Eye",
+        "Left Eye (outer)",
         "Right Ear",
-        "Mouth (left)",
+        "Left Ear",
         "Mouth (right)",
-        "Left Shoulder",
+        "Mouth (left)",
         "Right Shoulder",
-        "Left Elbow",
+        "Left Shoulder",
         "Right Elbow",
-        "Left Wrist",
+        "Left Elbow",
         "Right Wrist",
-        "Left Pinky",
+        "Left Wrist",
         "Right Pinky",
-        "Left Index",
+        "Left Pinky",
         "Right Index",
-        "Left Thumb",
+        "Left Index",
         "Right Thumb",
-        "Left Hip",
+        "Left Thumb",
         "Right Hip",
-        "Left Knee",
+        "Left Hip",
         "Right Knee",
-        "Left Ankle",
+        "Left Knee",
         "Right Ankle",
-        "Left Heel",
+        "Left Ankle",
         "Right Heel",
-        "Left Foot Index",
+        "Left Heel",
         "Right Foot Index",
+        "Left Foot Index",
     ]
 
 #==================OpenPose Setup==================
@@ -121,22 +127,22 @@ if poseModel == 2:
     BODY_PARTS_OPENPOSE = {
         "Nose": 0,
         "Neck": 1,
-        "Right Shoulder": 2,
-        "Right Elbow": 3,
-        "Right Wrist": 4,
-        "Left Shoulder": 5,
-        "Left Elbow": 6,
-        "Left Wrist": 7,
-        "Right Hip": 8,
-        "Right Knee": 9,
-        "Right Ankle": 10,
-        "Left Hip": 11,
-        "Left Knee": 12,
-        "Left Ankle": 13,
-        "Right Eye": 14,
-        "Left Eye": 15,
-        "Right Ear": 16,
-        "Left Ear": 17,
+        "Left Shoulder": 2,
+        "Left Elbow": 3,
+        "Left Wrist": 4,
+        "Right Shoulder": 5,
+        "Right Elbow": 6,
+        "Right Wrist": 7,
+        "Left Hip": 8,
+        "Left Knee": 9,
+        "Left Ankle": 10,
+        "Right Hip": 11,
+        "Right Knee": 12,
+        "Right Ankle": 13,
+        "Left Eye": 14,
+        "Right Eye": 15,
+        "Left Ear": 16,
+        "Right Ear": 17,
         "Background": 18,
     }
 
@@ -164,28 +170,28 @@ if poseModel == 2:
 #==================MoveNet Setup==================
 
 if poseModel == 3:
-    movenet = hub.load("https://tfhub.dev/google/movenet/singlepose/thunder/4")
+    movenet = hub.load("https://www.kaggle.com/models/google/movenet/TensorFlow2/singlepose-thunder/4")
 
     inputSize = 256 #256 for thunder (slower, better), 192 for lightning (faster, worse)
 
     BODY_PARTS_MOVENET = [
         "nose", 
+        "Right Eye", 
         "Left Eye", 
-        "right Eye", 
-        "Left Ear", 
         "Right Ear",
-        "Left Shoulder", 
+        "Left Ear", 
         "Right Shoulder", 
-        "Left Elbow", 
+        "Left Shoulder", 
         "Right Elbow",
-        "Left Wrist",
+        "Left Elbow", 
         "Right Wrist", 
-        "Left Hip", 
+        "Left Wrist",
         "Right Hip",
-        "Left Knee", 
+        "Left Hip", 
         "Right Knee", 
-        "Left Ankle", 
+        "Left Knee", 
         "Right Ankle"
+        "Left Ankle", 
     ]
 
     POSE_PAIRS_MOVENET = [
@@ -217,12 +223,6 @@ match predictionModel:
 
 #================================================
 
-#switches arm because image is flipped
-if rightOrLeft == "right":
-    rightOrLeft = "left"
-elif rightOrLeft == "left":
-    rightOrLeft = "right"
-
 class PoseDetector():
 
     def __init__(self, staticImageMode=False, modelComplexity=1, smoothLandmarks=True, enableSegmentation=False, smoothSegmentation=True, minDetectionConfidence=0.5, minTrackingConfidence=0.5):
@@ -246,6 +246,9 @@ class PoseDetector():
         #sets the angles to the previous one, so that if the angle is not detected, line continues horizontally
         armAngleRight = armAngleRightArray[-1]
         armAngleLeft = armAngleLeftArray[-1]
+
+        armAngleRight = armAngleRight/180
+        armAngleLeft = armAngleLeft/180
 
         #sets up empty arrays for parts to be filled in later
         r_shoulder = [0,0]
@@ -472,13 +475,15 @@ class ClassPredictor():
         #Gets a numercal prediction (-1 if unsure)
         match predictionModel:
             case 1:
-                numericalPrediction = self.getPredictionRandomForest(angleSample)
+                numericalConfidence, numericalPrediction = self.getPredictionRandomForest(angleSample)
             case 2:
-                numericalPrediction = self.getPredictionSVM(angleSample)
+                numericalConfidence, numericalPrediction = self.getPredictionSVM(angleSample)
             case 3:
-                numericalPrediction = self.getPredictionKNN(angleSample)
+                numericalConfidence, numericalPrediction = self.getPredictionKNN(angleSample)
             case 4:
-                numericalPrediction = self.getPredictionNeuralNetwork(angleSample)
+                numericalConfidence, numericalPrediction = self.getPredictionNeuralNetwork(angleSample)
+
+        writtenConfidence = str(int(numericalConfidence*100)) + "%"
 
         # Writes a prediction based on numercal prediction
         match numericalPrediction:
@@ -488,44 +493,52 @@ class ClassPredictor():
                 writtenPrediction = "Bad"
             case -1:
                 writtenPrediction = predictionWhenUnsure
-
-        return writtenPrediction
+                writtenConfidence = predictionWhenUnsure
+    
+        return writtenConfidence, writtenPrediction
     
     def getPredictionRandomForest(self, angleSample):
         quality = randomForest.predict([angleSample])[0]
         qualityPercentages = randomForest.predict_proba([angleSample])[0]
 
+        confidence = max(qualityPercentages)
+
         #Gets quality if model is confident
-        if max(qualityPercentages) > 0.6:
+        if max(qualityPercentages) > MinimumConfidenceOfPrediction:
             prediction = quality
         else:
             prediction = -1
 
-        return prediction
+        return confidence, prediction
     
     def getPredictionSVM(self, angleSample):
         quality = SVM.predict([angleSample])[0]
         qualityPercentages = SVM.predict_proba([angleSample])[0]
 
-        #Gets quality if model is confident
-        if max(qualityPercentages) > 0.6:
-            prediction = quality
-        else:
-            prediction = -1
-
-        return prediction
-    
-    def getPredictionKNN(self, angleSample):
-        quality = KNN.predict([angleSample])[0]
-        qualityPercentages = KNN.predict_proba([angleSample])[0]
+        confidence = max(qualityPercentages)
         
         #Gets quality if model is confident
-        if max(qualityPercentages) > 0.6:
+        if confidence > MinimumConfidenceOfPrediction:
             prediction = quality
         else:
             prediction = -1
 
-        return prediction
+        return confidence, prediction
+    
+    def getPredictionKNN(self, angleSample):
+        
+        quality = KNN.predict([angleSample])[0]
+        qualityPercentages = KNN.predict_proba([angleSample])[0]
+
+        confidence = max(qualityPercentages)
+
+        #Gets quality if model is confident
+        if confidence > MinimumConfidenceOfPrediction:
+            prediction = quality
+        else:
+            prediction = -1
+
+        return confidence, prediction
     
     def getPredictionNeuralNetwork(self, angleSample):
         
@@ -533,14 +546,15 @@ class ClassPredictor():
 
         qualityPercentages = NN.predict(angleSample)
         quality = tf.argmax(qualityPercentages, axis=-1).numpy()
-
+        
+        confidence = max(qualityPercentages[0])
         #Gets quality if model is confident
-        if max(qualityPercentages[0]) > 0.6:
+        if confidence > MinimumConfidenceOfPrediction:
             prediction = quality
         else:
             prediction = -1
 
-        return prediction
+        return confidence, prediction
     
 
 def main():
@@ -566,6 +580,7 @@ def main():
     predictor = ClassPredictor()
 
     prediction = predictionWhenUnsure
+    confidence = predictionWhenUnsure
 
     fpsfinalTime = 0
     fpsinitTime = 0
@@ -645,8 +660,10 @@ def main():
         #draws circle on new rep (if there is one)
         if repsArray[-1] > repsArray[-2]:
 
-            x = int(XOrigin - (timeArray[-1] - timeArray[-peaks[0]]) * timeToXRatio)
-            y = int(angle[-peaks[0]] * angleToYRatio)
+            amountOfFramesBackThatThePeakWasAt = peaks[0]
+
+            x = int(XOrigin - (timeArray[-1] - timeArray[-amountOfFramesBackThatThePeakWasAt]) * timeToXRatio)
+            y = int(angle[-amountOfFramesBackThatThePeakWasAt] * angleToYRatio)
 
             cv.circle(plot, (x, y), 15, (255, 0, 0), -1)
             cv.circle(plot, (x, y), 15, (255, 255, 255), 8)
@@ -659,19 +676,20 @@ def main():
                 secPerRep = 0
             
         # Guesses quality based on last 100 angles
-        if frames > 110:
-            prediction = predictor.getPrediction(angle[-100:])
+        if frames > 60:
+            confidence, prediction = predictor.getPrediction(angle[-50:])
 
         #Draws rectangles and text
         cv.rectangle(canvas, (1, 1), (int(5.3*textHeight), int(1.3*textHeight)), (255, 255, 255), -1)
         cv.rectangle(canvas, (1, 1), (int(5.3*textHeight), int(1.3*textHeight)), (255, 0, 0), 5)
-        cv.rectangle(canvas, (1, frame_height), (int(11.1*textHeight), int(frame_height+4.3*textHeight)), (255, 255, 255), -1)
-        cv.rectangle(canvas, (1, frame_height), (int(11.1*textHeight), int(frame_height+4.3*textHeight)), (255, 0, 0), 5)
+        cv.rectangle(canvas, (1, frame_height), (int(11.1*textHeight), int(frame_height+4.8*textHeight)), (255, 255, 255), -1)
+        cv.rectangle(canvas, (1, frame_height), (int(11.1*textHeight), int(frame_height+4.8*textHeight)), (255, 0, 0), 5)
 
         cv.putText(canvas, "FPS: " + str(int(fps)), (2, textHeight), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
         cv.putText(canvas, "Reps: " + str(int(reps)), (4, frame_height+textHeight+4), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
         cv.putText(canvas, "Seconds Per Rep: " + str(round(secPerRep, 1)), (4, frame_height+2*textHeight+4), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         cv.putText(canvas, "Prediction: " + str(prediction), (4, int(frame_height+3.5*textHeight+4)), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 3)
+        cv.putText(canvas, "Confidence: " + confidence, (4, int(frame_height+4.5*textHeight+4)), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         cv.imshow("Image", canvas)
 
@@ -701,3 +719,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    

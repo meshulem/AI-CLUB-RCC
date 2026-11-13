@@ -1,27 +1,18 @@
-# Download Anaconda at https://www.anaconda.com/download/success?reg=skipped&path=distribution. Follow installation instructions.
+# 1. Download Python 3.11 (other versions are not tested with these pins)
 
-# Download the Python extension in your IDE
+# 2. Create environment: python -m venv venv
 
-# Run the following commands in the terminal:
-'''
+# 3. Activate it:
+#-----Windows: venv\Scripts\activate
+#-----Mac/Linux: source venv/bin/activate
 
-  conda create -n club-env python=3.11.11
-  conda activate club-env
-  pip install -r requirements.txt
-  which python
-
-'''
-# copy the final path
-
-# Go to Command Palette (cmd/ctrl+shift+p) > Python: Select Interpreter > Enter interpreter Path
-
-# paste the path and press enter
+# 4. Run: pip install -r requirements.txt
 
 numpy==1.26.4
 ml-dtypes==0.3.2
 opencv-contrib-python==4.10.0.84 # Do not install opencv-python
 mediapipe==0.10.14
-protobuf>=4.25.3,<5
+protobuf>=4.25.9
 jax==0.4.30
 jaxlib==0.4.30
 tensorflow==2.16.2
@@ -31,3 +22,6 @@ tensorflow-hub==0.16.1
 setuptools<81
 pandas==2.2.3
 scikit-learn==1.6.1
+joblib==1.6.0
+streamlit==1.58.0
+streamlit-webrtc==0.62.4
