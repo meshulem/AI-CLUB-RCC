@@ -702,7 +702,10 @@ webrtc_ctx = webrtc_streamer(
     key="streamer",
     video_frame_callback=mainFunction,
     media_stream_constraints={"video": True, "audio": False}, 
-    on_video_ended=endingFunction
+    on_video_ended=endingFunction,
+    rtc_configuration={
+        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+    }
     )
 
 dataColumn, chartColumn = st.columns([1, 3])
