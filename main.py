@@ -31,11 +31,11 @@ warnings.filterwarnings('ignore')
 #==================Key Choices==================
 
 # Choose arm ("right" or "left")
-rightOrLeft = "right"
+rightOrLeft = "left"
 
 # Choose model for detecting pose 
     # 1=MediaPipe (recommended)
-    # 2=OpenPose
+    # 2=OpenPose (You need to install pose_iter_440000.caffemodel from https://huggingface.co/Tlaloc-Es/openpose/blob/main/pose_iter_440000.caffemodel and put it into this folder)
     # 3=MoveNet
 poseModel = 1
 
@@ -675,7 +675,7 @@ def main():
             except:
                 secPerRep = 0
             
-        # Guesses quality based on last 100 angles
+        # Guesses quality based on last 50 angles
         if frames > 60:
             confidence, prediction = predictor.getPrediction(angle[-50:])
 

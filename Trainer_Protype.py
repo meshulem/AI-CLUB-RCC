@@ -9,7 +9,7 @@
 # Choose arm ("right" or "left")
 rightOrLeft = "right"
 
-firstTrial = 141 #will overwrite if already there
+firstTrial = 141 #will overwrite if already in file
 
 classifier = 1
 
@@ -28,7 +28,7 @@ movingAverageSize = 3
 
 initialCountdownSeconds = 10
 
-secondsBetweenTrials = 0
+secondsBetweenTrials = 3
 
 #=================Import requirements=================
 

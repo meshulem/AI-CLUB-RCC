@@ -1,16 +1,16 @@
-# 1. Download Python 3.11 (other versions are not tested with these pins)
+# 1. Download anaconda
 
-# 2. Create environment: python -m venv venv
+# 2. Create environment: conda create -n name-env python=3.11.11
 
-# 3. Activate it:
-#-----Windows: venv\Scripts\activate
-#-----Mac/Linux: source venv/bin/activate
+# 3. Activate it: conda activate name-env
 
 # 4. Run: pip install -r requirements.txt
 
+# 5. If that does not work, run: pip install -r requirements-working.txt
+
 numpy==1.26.4
 ml-dtypes==0.3.2
-opencv-contrib-python==4.10.0.84 # Do not install opencv-python
+opencv-contrib-python==4.10.0.84 # Do not install opencv-python, you wil die
 mediapipe==0.10.14
 protobuf>=4.25.9
 jax==0.4.30
