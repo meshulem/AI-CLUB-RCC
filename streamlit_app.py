@@ -11,31 +11,6 @@
 # Press any key to finish
 
 
-#=================Import requirements=================
-
-import sys
-import threading
-import os
-import cv2 as cv
-import numpy as np
-import mediapipe as mp
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
-import tensorflow as tf
-import tensorflow_hub as hub
-from scipy.ndimage import uniform_filter1d
-from scipy.signal import find_peaks
-import time
-import joblib
-import warnings
-warnings.filterwarnings('ignore')
-import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoHTMLAttributes
-import numpy as np
-import av
-import pandas as pd
-import altair as alt
-import threading
-
 #==================Key Choices==================
 
 # Choose arm ("right" or "left")
@@ -53,7 +28,34 @@ minimumAngle = 60
 
 secondsBetweenModelPredictions = 3
 
+#=================Import requirements=================
+
+import sys
+import threading
+import os
+import cv2 as cv
+import numpy as np
+import mediapipe as mp
+if poseModel == 3:
+    os.environ["TF_USE_LEGACY_KERAS"] = "1"
+    import tensorflow as tf
+    import tensorflow_hub as hub
+from scipy.ndimage import uniform_filter1d
+from scipy.signal import find_peaks
+import time
+import joblib
+import warnings
+warnings.filterwarnings('ignore')
+import streamlit as st
+from streamlit_webrtc import webrtc_streamer, VideoHTMLAttributes
+import numpy as np
+import av
+import pandas as pd
+import altair as alt
+import threading
+
 #==================Other Choices==================
+
 
 #options for text of body parts
 textColor = 255
